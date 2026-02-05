@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flappy Bird Long Jumpscare</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body { margin:0; background:#70c5ce; }
+  canvas { display:block; margin:auto; background:#70c5ce; }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="360" height="640"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+/* =========================
+   IMAGES
+========================= */
+const birdImg = new Image();
+let birdLoaded=false;
+birdImg.onload=()=>birdLoaded=true;
+birdImg.src="https://uploads.onecompiler.io/44cprdd4b/44cprceeu/Screenshot_2026-01-19-08-07-21-18_92460851df6f172a4592fca41cc2d2e6.jpg";
+
+const jumpscareImg = new Image();
+let jumpscareLoaded=false;
+jumpscareImg.onload=()=>jumpscareLoaded=true;
+jumpscareImg.src="https://uploads.onecompiler.io/44cprdd4b/44cprceeu/maryo.png";
+
+/* =========================
+   AUDIO
+========================= */
+const jumpscareSound = new Audio("https://doraemonlover691-maker.github.io/Audio/Jumpscare%20Sound.mp3");
+jumpscareSound.preload = "auto";
+
+/* =========================
+   GAME VARIABLES
+========================= */
+let bird, pipes, score, gameOver;
+let jumpscareActive=false;
+let jumpscareStartTime=0;
+let deathCount=0;
+
+const GRAVITY = 0.6;
+const JUMP = -9;
+const PIPE_GAP = 250;
+const PIPE_WIDTH = 50;
+const SPEED = 2;
+
+function resetGame(){
+  bird={x:80, y:320, v:0};
+  pipes=[];
+  score=0;
+  gameOver=false;
+  jumpscareActive=false;
+  jumpscareStartTime=0;
+}
+resetGame();
+
+/* =========================
+   CONTROLS
+========================= */
+document.addEventListener("keydown", ()=>{
+  if(!gameOver) bird.v=JUMP;
+});
+document.addEventListener("click", ()=>{
+  if(gameOver){
+    resetGame();
+  } else {
+    bird.v = JUMP;
+  }
+});
+document.addEventListener("touchstart", ()=>{
+  if(gameOver){
+    resetGame();
+  } else {
+    bird.v = JUMP;
+  }
+});
+
+/* =========================
+   GAME LOOP
+========================= */
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(!gameOver){
+    bird.v += GRAVITY;
+    bird.y += bird.v;
+
+    if(pipes.length===0 || pipes[pipes.length-1].x<canvas.width-200){
+      let top=Math.random()*250+50;
+      pipes.push({x:canvas.width, top:top, passed:false});
+    }
+
+    pipes.forEach(p=>p.x-=SPEED);
+  }
+
+  // draw pipes
+  ctx.fillStyle="green";
+  pipes.forEach(p=>{
+    ctx.fillRect(p.x,0,PIPE_WIDTH,p.top);
+    ctx.fillRect(p.x,p.top+PIPE_GAP,PIPE_WIDTH,canvas.height);
+  });
+
+  // draw bird
+  if(birdLoaded){
+    ctx.drawImage(birdImg,bird.x-40,bird.y-40,80,80);
+  } else {
+    ctx.fillStyle="yellow";
+    ctx.beginPath();
+    ctx.arc(bird.x,bird.y,40,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // collision + scoring
+  pipes.forEach(p=>{
+    if(bird.x+40>p.x && bird.x-40<p.x+PIPE_WIDTH &&
+       (bird.y-40<p.top || bird.y+40>p.top+PIPE_GAP)){
+      deathCount++;
+      if(deathCount>=2 && !jumpscareActive){
+        jumpscareActive=true;
+        jumpscareStartTime=performance.now();
+        jumpscareSound.play().catch(e=>{});
+      }
+      gameOver=true;
+    }
+    if(!p.passed && bird.x>p.x+PIPE_WIDTH){
+      score++;
+      p.passed=true;
+    }
+  });
+
+  if(bird.y-40<0 || bird.y+40>canvas.height){
+    deathCount++;
+    if(deathCount>=2 && !jumpscareActive){
+      jumpscareActive=true;
+      jumpscareStartTime=performance.now();
+      jumpscareSound.play().catch(e=>{});
+    }
+    gameOver=true;
+  }
+
+  // draw score
+  ctx.fillStyle="white";
+  ctx.font="20px Arial";
+  ctx.fillText("Score: "+score,10,30);
+
+  // FLASH + POP jumpscare logic
+  if(jumpscareActive && jumpscareLoaded){
+    const elapsed = performance.now() - jumpscareStartTime;
+
+    if(elapsed <= 2000){ // flash white for 2 seconds
+      ctx.fillStyle="white";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    } 
+    else if(elapsed > 2000 && elapsed <= 6000){ // show image 4 seconds
+      ctx.drawImage(jumpscareImg,0,0,canvas.width,canvas.height);
+    }
+    // after 4s, stays until restart
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
